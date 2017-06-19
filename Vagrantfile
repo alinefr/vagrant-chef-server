@@ -4,29 +4,32 @@
 
 $chef_server = <<CHEF_SERVER
 chef_binary=/opt/opscode/bin/private-chef-ctl
-packages=(curl ntp)
+berks_binary=/opt/chefdk/embedded/bin/berks
+packages=(curl ntp build-essential)
 apt-get update
 for pkg in ${packages[@]}; do
   dpkg -l $pkg | grep -q ^ii || apt-get install -y $pkg
 done
-service ntp stop; ntpdate -s 1.br.pool.ntp.org; service ntp start
+service ntp stop; ntpd -gq; service ntp start
 if ! test -f "$chef_binary"; then
   wget -O- https://omnitruck.chef.io/install.sh | sudo bash -s -- -c stable -P chef-server &&
   for cmd in reconfigure restart; do chef-server-ctl $cmd; done &&
-  until (curl -D - http://localhost:8000/_status) | grep "200 OK"; do sleep 15s; done
-  while (curl http://localhost:8000/_status) | grep "fail"; do sleep 15s; done
-  chef-server-ctl user-create admin Aline Admin aline@alinefreitas.com.br insecurepassword --filename admin.pem
-  chef-server-ctl org-create alinefreitas "Aline Freitas" --association_user admin --filename alinefreitas-validator.pem
-  mkdir -p /vagrant/secrets
-  cp -f /home/vagrant/admin.pem /vagrant/secrets
+  until (curl -D - http://localhost:8000/_status) | grep "200 OK"; do sleep 15s; done &&
+  while (curl http://localhost:8000/_status) | grep "fail"; do sleep 15s; done &&
+  chef-server-ctl user-create admin Aline Admin aline@alinefreitas.com.br insecurepassword --filename admin.pem && 
+  chef-server-ctl org-create alinefreitas "Aline Freitas" --association_user admin --filename alinefreitas-validator.pem &&
+  mkdir -p /vagrant/secrets &&
+  cp -f /home/ubuntu/admin.pem /vagrant/secrets
+fi
+if ! test -f "$berks_binary"; then
+  wget -O- https://omnitruck.chef.io/install.sh | sudo bash -s -- -c stable -P chefdk
 fi
 CHEF_SERVER
 
 $node = <<NODE
 apt-get update
-apt-get install -y ntp
 dpkg -l ntp | grep -q ^ii || apt-get install -y ntp
-service ntp stop; ntpdate -s 1.br.pool.ntp.org; service ntp start
+service ntp stop; ntpd -gq; service ntp start
 echo "10.1.1.33 chef-server.test" | tee -a /etc/hosts
 NODE
 
