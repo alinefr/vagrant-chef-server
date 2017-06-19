@@ -7,7 +7,7 @@ chef_binary=/opt/opscode/bin/private-chef-ctl
 packages=(curl ntp)
 apt-get update
 for pkg in ${packages[@]}; do
-  dpkg -i $pkg | grep -q ^ii || apt-get install -y $pkg
+  dpkg -l $pkg | grep -q ^ii || apt-get install -y $pkg
 done
 service ntp stop; ntpdate -s 1.br.pool.ntp.org; service ntp start
 if ! test -f "$chef_binary"; then
@@ -25,6 +25,7 @@ CHEF_SERVER
 $node = <<NODE
 apt-get update
 apt-get install -y ntp
+dpkg -l ntp | grep -q ^ii || apt-get install -y ntp
 service ntp stop; ntpdate -s 1.br.pool.ntp.org; service ntp start
 echo "10.1.1.33 chef-server.test" | tee -a /etc/hosts
 NODE
